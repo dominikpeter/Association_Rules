@@ -4,37 +4,60 @@ from mlxtend.frequent_patterns import association_rules
 from scipy.sparse import coo_matrix, csc_matrix
 import scipy.sparse.sputils
 import numpy as np
+import Helper as hp
 
 # df = pd.read_excel('Online Retail.xlsx')
 # df.to_csv("OnlineRetail.csv", sep="\t", index=False)
-df = pd.read_csv("OnlineRetail.csv", sep="\t")
+# df = pd.read_csv("OnlineRetail.csv", sep="\t")
+# df.to_csv("Transaktionen.csv", sep="\t", index=False)
+df = pd.read_csv("Transaktionen.csv", sep="\t")
+
+# query = """Select Year, OrderNo, iditemOrigin, Sales = sum(Sales)
+#         from crhbusadwh01.infopool.fact.sales
+#         group by Year, OrderNo, iditemOrigin"""
+#
+# con = hp.create_connection_string_turbo("crhbusadwh02", "AnalystCM")
+# df = hp.sql_to_pandas(con, query)
 
 
-df['Description'] = df['Description'].str.strip()
-df.dropna(axis=0, subset=['InvoiceNo'], inplace=True)
-df['InvoiceNo'] = df['InvoiceNo'].astype('str')
-df = df[~df['InvoiceNo'].str.contains('C')]
+df['iditemOrigin'] = df['iditemOrigin'].astype(str)
+df['OrderNo'] = df['OrderNo'].astype(str)
+df['Sales'] = df['Sales'].astype(float)
+df['Year'] = df['Year'].astype(int)
 
-df['Country'].unique()
+check = (   (df['Year'] == 2017) &
+            (df['Sales'] > 0) &
+            (df['OrderNo'] > "") &
+            (df['iditemOrigin']> "")
+                )
 
-df = df[df['Country'] =="Switzerland"]
+df = df[check]
 
-basket = (df.groupby(['InvoiceNo', 'Description'])['Quantity']
+df["OrderNo"] = df['OrderNo'].astype("category")
+df["iditemOrigin"] = df['iditemOrigin'].astype("category")
+df['Sales'] = df['Sales'].astype('float')
+
+
+basket = (df.groupby(['OrderNo', 'iditemOrigin'])['Sales']
           .sum()
-          .unstack()
-          .reset_index()
-          .fillna(0)
-          .set_index('InvoiceNo'))
+          # .unstack()
+          # .reset_index()
+          # .fillna(0)
+          # .set_index('OrderNo')
+          )
 
-basket.shape
+basket
+
 
 # df['InvoiceNo'] = df['InvoiceNo'].astype("category")
 # df['Description'] = df['Description'].astype("category")
 #
-# row = df['InvoiceNo'].cat.codes
-# col = df['Description'].cat.codes
-# data = df['Quantity'].astype(np.int64)
-# sparse_matrix = coo_matrix((data, (row, col)))
+row = df['OrderNo'].cat.codes
+col = df['iditemOrigin'].cat.codes
+data = df['Sales'].astype(np.float)
+sparse_matrix = coo_matrix((data, (row, col)))
+
+
 #
 # sparse_matrix.shape
 
